@@ -1,13 +1,7 @@
-# Sample Hardhat Project
+# 去中心化交易所（DEX）实现
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
-
-Try running some of the following tasks:
-
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.js
-```
+## 实现了一个简易的去中心化交易所。包含以下功能。
+1. 创建代币对交易池 (e.g. ETH/USDC)。
+2. 用户可以创建头寸为交易池添加流动性。
+3. 展示所有交易池。
+4. 展示交易池下所有头寸。

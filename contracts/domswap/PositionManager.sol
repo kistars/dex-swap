@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "./libraries/LiquidityAmounts.sol";
 import "./libraries/TickMath.sol";
+import "./libraries/TransferHelper.sol";
 import "./libraries/FixedPoint128.sol";
 
 import "./interfaces/IPositionManager.sol";
@@ -76,8 +77,6 @@ contract PositionManager is IPositionManager, ERC721 {
         address pool
     ) internal view returns (PositionInfo memory) {
         IPool poolContract = IPool(pool);
-        (, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128,,) =
-            poolContract.getPosition(address(this));
 
         return PositionInfo({
             id: positionId,
@@ -91,8 +90,8 @@ contract PositionManager is IPositionManager, ERC721 {
             tickUpper: poolContract.tickUpper(),
             tokensOwed0: 0,
             tokensOwed1: 0,
-            feeGrowthInside0LastX128: feeGrowthInside0LastX128,
-            feeGrowthInside1LastX128: feeGrowthInside1LastX128
+            feeGrowthInside0LastX128: poolContract.feeGrowthGlobal0X128(),
+            feeGrowthInside1LastX128: poolContract.feeGrowthGlobal1X128()
         });
     }
 
@@ -150,7 +149,8 @@ contract PositionManager is IPositionManager, ERC721 {
 
         // 计算这部分流动性产生的手续费
         // todo: 这里可以优化
-        (, uint256 feeGrowthInside0LastX128, uint256 feeGrowthInside1LastX128,,) = pool.getPosition(address(this));
+        uint256 feeGrowthInside0LastX128 = pool.feeGrowthGlobal0X128();
+        uint256 feeGrowthInside1LastX128 = pool.feeGrowthGlobal1X128();
 
         position.tokensOwed0 += uint128(amount0)
             + uint128(
@@ -181,14 +181,21 @@ contract PositionManager is IPositionManager, ERC721 {
         // 通过 isAuthorizedForToken 检查 positionId 是否有权限
         // 调用 Pool 的方法给 LP 退流动性
         PositionInfo storage position = positions[positionId];
-        address _pool = poolManager.getPool(position.token0, position.token1, position.index);
-        IPool pool = IPool(_pool);
-        (amount0, amount1) = pool.collect(recipient, position.tokensOwed0, position.tokensOwed1);
+        (amount0, amount1) = (position.tokensOwed0, position.tokensOwed1);
+        // 将代币转回用户
+        if (amount0 > 0) {
+            TransferHelper.safeTransfer(position.token0, recipient, amount0);
+        }
+        if (amount1 > 0) {
+            TransferHelper.safeTransfer(position.token1, recipient, amount1);
+        }
 
         // position 已经彻底没用了，销毁
         position.tokensOwed0 = 0;
         position.tokensOwed1 = 0;
         _burn(positionId);
+
+        emit Collect(msg.sender, recipient, amount0, amount1);
     }
 
     function mintCallback(uint256 amount0, uint256 amount1, bytes calldata data) external override {

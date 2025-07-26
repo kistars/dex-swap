@@ -148,7 +148,6 @@ contract PositionManager is IPositionManager, ERC721 {
         (amount0, amount1) = pool.burn(_liquidity);
 
         // 计算这部分流动性产生的手续费
-        // todo: 这里可以优化
         uint256 feeGrowthInside0LastX128 = pool.feeGrowthGlobal0X128();
         uint256 feeGrowthInside1LastX128 = pool.feeGrowthGlobal1X128();
 
@@ -181,6 +180,26 @@ contract PositionManager is IPositionManager, ERC721 {
         // 通过 isAuthorizedForToken 检查 positionId 是否有权限
         // 调用 Pool 的方法给 LP 退流动性
         PositionInfo storage position = positions[positionId];
+        // 调用 Pool 的方法给 LP 退流动性
+        address _pool = poolManager.getPool(position.token0, position.token1, position.index);
+        IPool pool = IPool(_pool);
+
+        // 计算这部分流动性产生的手续费
+        uint256 feeGrowthInside0LastX128 = pool.feeGrowthGlobal0X128();
+        uint256 feeGrowthInside1LastX128 = pool.feeGrowthGlobal1X128();
+
+        position.tokensOwed0 += uint128(
+            FullMath.mulDiv(
+                feeGrowthInside0LastX128 - position.feeGrowthInside0LastX128, position.liquidity, FixedPoint128.Q128
+            )
+        );
+
+        position.tokensOwed1 += uint128(
+            FullMath.mulDiv(
+                feeGrowthInside1LastX128 - position.feeGrowthInside1LastX128, position.liquidity, FixedPoint128.Q128
+            )
+        );
+
         (amount0, amount1) = (position.tokensOwed0, position.tokensOwed1);
         // 将代币转回用户
         if (amount0 > 0) {

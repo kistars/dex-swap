@@ -2,6 +2,7 @@
   "name": "hardhat-project",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@nomicfoundation/hardhat-verify": "^2.1.0",
     "@nomicfoundation/hardhat-viem": "^2.1.0",
     "@openzeppelin/contracts": "^5.4.0",
     "@uniswap/v3-sdk": "^3.25.2",
@@ -9,6 +10,7 @@
     "viem": "^2.33.0"
   },
   "dependencies": {
-    "@nomicfoundation/hardhat-toolbox-viem": "^4.1.0"
+    "@nomicfoundation/hardhat-toolbox-viem": "^4.1.0",
+    "dotenv": "^17.2.1"
   }
 }
